@@ -27,7 +27,7 @@ namespace byes {
 			if (link_ != &to_link)
 			{
 				link_ = &to_link;
-				to_link.DynamicLink<LinkToType, LinkFromType, ID>::Set(*reinterpret_cast<LinkFromType*>(this));
+				to_link.DynamicLink<LinkToType, LinkFromType, ID>::Set(static_cast<LinkFromType&>(*this));
 			}
 		}
 
@@ -43,7 +43,7 @@ namespace byes {
 			if (moved_link.Has())
 			{
 				link_ = &(moved_link.Get());
-				moved_link.Get().DynamicLink<LinkToType, LinkFromType, ID>::Set(*reinterpret_cast<LinkFromType>(this));
+				moved_link.Get().DynamicLink<LinkToType, LinkFromType, ID>::Set(static_cast<LinkFromType&>(*this));
 			}
 			else
 			{
@@ -63,7 +63,7 @@ namespace byes {
 			if (moved_link.Has())
 			{
 				link_ = &(moved_link.Get());
-				moved_link.Get().DynamicLink<LinkToType, LinkFromType, ID>::Set(*reinterpret_cast<LinkFromType*>(this));
+				moved_link.Get().DynamicLink<LinkToType, LinkFromType, ID>::Set(static_cast<LinkFromType&>(*this));
 			}
 			else
 			{

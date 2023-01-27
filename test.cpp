@@ -26,7 +26,6 @@ struct C : public byes::DynamicLink<C, A, ExplicitId>
 	int c = 0;
 };
 
-
 int main()
 {
 	A a;

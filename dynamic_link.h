@@ -6,152 +6,228 @@
 
 namespace byes {
 
-	template<typename T>
-	struct remove_const
-	{
-		typedef T Type;
-	};
-
-	template<typename T>
-	struct remove_const<const T>
-	{
-		typedef T Type;
-	};
-
-
 	template<class ToType, size_t link_cnt = 1>
 	struct LinkArray
 	{
 
 	};
 
-
-	template<class FromType, class... ToTypes>
-	class LinkedInternal {};
-
-	template<class FromType, class ToTypeFirst, class... ToTypes>
-	class LinkedInternal<FromType, ToTypeFirst, ToTypes...> : public Linked<FromType, LinkArray<ToTypeFirst>, ToTypes...>
-	{};
-
-	template<class FromType, class ToTypeFirst, size_t first_array_cnt, class... ToTypes>
-	class LinkedInternal<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...> : public Linked<FromType, ToTypes...>
+	template<class FromType, class ToType, size_t link_cnt>
+	class LinksHolder
 	{
 
 	private:
 
-		std::pair<ToTypeFirst*, size_t> links_and_remote_indices_[first_array_cnt];
+		std::pair<ToType*, size_t> links_and_remote_indices_[link_cnt];
+
+		void NullPtrFill()
+		{
+			for (size_t index = 0; index < link_cnt; index++)
+			{
+				links_and_remote_indices_[index].first = nullptr;
+			}
+		}
+
+		inline void CopyLinksAndRemoteIndices(const LinksHolder& source)
+		{
+			for (size_t index = 0; index < link_cnt; index++)
+			{
+				links_and_remote_indices_[index] = source.links_and_remote_indices_[index];
+			}
+		}
+
+		inline void AppendThisToAllRemote()
+		{
+			for (size_t index = 0; index < link_cnt; index++)
+			{
+				if (links_and_remote_indices_[index].first != nullptr)
+				{
+					links_and_remote_indices_[index].second = links_and_remote_indices_[index].first->Append<FromType>(static_cast<FromType&>(*this));
+				}
+			}
+		}
+
+		inline void SetAllRemoteToThis()
+		{
+			for (size_t index = 0; index < link_cnt; index++)
+			{
+				if (links_and_remote_indices_[index].first != nullptr)
+				{
+					links_and_remote_indices_[index].first->Set<FromType>(static_cast<FromType&>(*this), links_and_remote_indices_[index].second);
+				}
+			}
+		}
 
 	protected:
 
-		Linked<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...>() : links_() {}
-
-		ToTypeFirst& Get(size_t index)
+		LinksHolder()
 		{
-			if (index < first_array_cnt)
+			NullPtrFill();
+		}
+
+		LinksHolder(const LinksHolder& copied)
+		{
+			CopyLinksAndRemoteIndices(copied);
+			AppendThisToAllRemote();
+		}
+
+		LinksHolder(LinksHolder&& moved)
+		{
+			CopyLinksAndRemoteIndices(moved);
+			SetAllRemoteToThis();
+			moved.NullPtrFill();
+		}
+
+		LinksHolder& operator=(const LinksHolder& copied)
+		{
+			CopyLinksAndRemoteIndices(copied);
+			AppendThisToAllRemote();
+
+			return *this;
+		}
+
+		LinksHolder& operator=(LinksHolder&& moved)
+		{
+			CopyLinksAndRemoteIndices(moved);
+			SetAllRemoteToThis();
+			moved.NullPtrFill();
+
+			return *this;
+		}
+
+		ToType& Get(size_t index)
+		{
+			if (index < link_cnt)
 			{
 				return *links_and_remote_indices_[index].first;
 			}
-			throw std::out_of_range();
+			throw std::out_of_range("index");
 		}
 
-		size_t Append(ToTypeFirst& to_link)
+		size_t Append(ToType& to_link)
 		{
-			for (size_t i = 0; i < first_array_cnt; i++)
+			for (size_t index = 0; index < link_cnt; index++)
 			{
 				if (links_and_remote_indices_[index].first == &to_link)
 					return index;
 			}
 
 			size_t index = 0;
-			for (; index < first_array_cnt && links_and_remote_indices_[index] != nullptr; index++);
+			for (; index < link_cnt && links_and_remote_indices_[index].first != nullptr; index++);
 
-			if (index == first_array_cnt) throw std::length_error();
+			if (index == link_cnt) throw std::length_error("attempt to append new link when all links have been already assigned");
 
-			ToTypeFirst& to_link_mutable = const_cast<ToTypeFirst&>(to_link);
+			ToType& to_link_mutable = const_cast<ToType&>(to_link);
 			links_and_remote_indices_[index].first = &to_link;
 			links_and_remote_indices_[index].second = to_link_mutable.Append<FromType>(static_cast<FromType&>(*this));
+
+			return index;
 		}
 
 		void Reset(size_t index)
 		{
-			if (index < first_array_cnt)
+			if (index < link_cnt)
 			{
-				if (links_and_remote_indices_->first != nullptr)
+				if (links_and_remote_indices_[index].first != nullptr)
 				{
-					ToTypeFirst& to_link_mutable = const_cast<ToTypeFirst&>(*(links_and_remote_indices_[index]->first));
-					links_and_remote_indices_->first = nullptr;
-					to_link_mutable.Reset<FromType>(links_and_remote_indices_[index]->second);
+					ToType* to_ptr = links_and_remote_indices_[index].first;
+					links_and_remote_indices_[index].first = nullptr;
+					to_ptr->Reset<FromType>(links_and_remote_indices_[index].second);
 				}
 				return;
 			}
-			throw std::out_of_range();
+			throw std::out_of_range("index");
 		}
 
-		void Set(ToTypeFirst& to_link, size_t index)
+		void Set(ToType& to_link, size_t index)
 		{
-			if (index < first_array_cnt)
+			if (index < link_cnt)
 			{
-				if (links_[index].first != nullptr && links_[index].first != to_link)
-				{
-					Reset(index);
-				}
+				Reset(index);
 
-				if (links_and_remote_indices_[index].first == nulptr)
-				{
-					links_and_remote_indices_[index].first = &to_link;
+				links_and_remote_indices_[index].first = &to_link;
 
-					ToTypeFirst& to_link_mutable = const_cast<ToTypeFirst&>(to_link);
-					links_and_remote_indices_[index].second = to_link_mutable.Append<FromType>(static_cast<FromType&>(*this));
-				}
+				links_and_remote_indices_[index].second = links_and_remote_indices_[index].first->Append<FromType>(static_cast<FromType&>(*this));
 
 				return;
 			}
 
-			throw std::out_of_range();
+			throw std::out_of_range("index");
 		}
 
-		Linked<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...>& operator=(const Linked<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...>& copied)
+		~LinksHolder()
 		{
-			links_and_remote_indices_ = copied.links_and_remote_indices;
-
-			for (size_t i = 0; i < first_array_cnt; i++)
+			for (size_t index = 0; index < link_cnt; index++)
 			{
-				if (links_and_remote_indices_[i] != nullptr)
-				{
-					ToTypeFirst& to_link_mutable = const_cast<ToTypeFirst&>(*(links_and_remote_indices_[i]));
-					links_and_remote_indices_[i].second = to_link_mutable.Append<FromType>(static_cast<FromType&>(*this))
-				}
+				Reset(index);
 			}
-
-			return *this;
 		}
+	};
 
-		Linked<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...>& operator=(Linked<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...>&& moved)
+
+	template<class FromType, class... ToTypes>
+	class LinkedInternal 
+	{
+	protected:
+		template<typename ToType>
+		struct LinkCount
 		{
-			links_and_remote_indices_ = moved.links_and_remote_indices;
+			static const size_t value = 0;
+		};
+	};
 
-			for (size_t i = 0; i < first_array_cnt; i++)
-			{
-				if (links_and_remote_indices_[i] != nullptr)
-				{
-					ToTypeFirst& to_link_mutable = const_cast<ToTypeFirst&>(*(links_and_remote_indices_[i]));
-					to_link_mutable.Set<FromType>(static_cast<FromType&>(*this), links_and_remote_indices_[i].second);
-				}
-			}
+	template<class FromType, class ToTypeFirst, class... ToTypes>
+	class LinkedInternal<FromType, ToTypeFirst, ToTypes...> : public LinkedInternal<FromType, LinkArray<ToTypeFirst, 1>, ToTypes...>
+	{
+	protected:
 
-			return *this;
-		}
+		template<typename ToType>
+		struct LinkCount
+		{
+			static const size_t value = LinkedInternal<FromType, LinkArray<ToTypeFirst>, ToTypes...>::template LinkCount<ToType>::value;
+		};
+	};
 
+	template<class FromType, class ToTypeFirst, size_t first_array_cnt, class... ToTypes>
+	class LinkedInternal<FromType, LinkArray<ToTypeFirst, first_array_cnt>, ToTypes...> : public LinksHolder<FromType, ToTypeFirst, first_array_cnt>, public LinkedInternal<FromType, ToTypes...>
+	{
+	protected:
+
+		template<typename ToType>
+		struct LinkCount
+		{
+			static const size_t value = LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value;
+		};
+
+		template<>
+		struct LinkCount<ToTypeFirst>
+		{
+			static const size_t value = first_array_cnt;
+		};
 	};
 
 	template<class FromType, class... ToTypes>
-	class Linked: private LinkedInternal<FromType, ToTypes>
+	class Linked: public LinkedInternal<FromType, ToTypes...>
 	{
 	public:
 
-		template<class ToType>
-		auto&& Get() { }
+		template<typename ToType>
+		struct LinkCount
+		{
+			static const size_t value = LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value;
+		};
 
+		template<class ToType>
+		ToType& Get(size_t index = 0) { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Get(index); }
+
+		template<class ToType>
+		void Set(ToType& to_link, size_t index = 0) { LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Set(to_link, index); }
+
+		template<class ToType>
+		size_t Append(ToType& to_link) { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Append(to_link); }
+
+		template<class ToType>
+		void Reset(size_t index = 0) { LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Reset(index); }
 	};
 
 

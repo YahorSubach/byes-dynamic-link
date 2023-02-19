@@ -6,6 +6,18 @@
 
 namespace byes {
 
+	template<typename RefType>
+	struct RemoveConst
+	{
+		typedef RefType Type;
+	};
+
+	template<typename RefType>
+	struct RemoveConst<const RefType>
+	{
+		typedef RefType Type;
+	};
+
 	template<class ToType, size_t link_cnt = 1>
 	struct LinkArray
 	{
@@ -58,7 +70,7 @@ namespace byes {
 			}
 		}
 
-	protected:
+	public:
 
 		LinksHolder()
 		{
@@ -95,7 +107,7 @@ namespace byes {
 			return *this;
 		}
 
-		ToType& Get(size_t index)
+		ToType& Get(size_t index) const
 		{
 			if (index < link_cnt)
 			{
@@ -117,7 +129,7 @@ namespace byes {
 
 			if (index == link_cnt) throw std::length_error("attempt to append new link when all links have been already assigned");
 
-			ToType& to_link_mutable = const_cast<ToType&>(to_link);
+			typename RemoveConst<ToType>::Type& to_link_mutable = const_cast<RemoveConst<ToType>::Type&>(to_link);
 			links_and_remote_indices_[index].first = &to_link;
 			links_and_remote_indices_[index].second = to_link_mutable.Append<FromType>(static_cast<FromType&>(*this));
 
@@ -130,9 +142,10 @@ namespace byes {
 			{
 				if (links_and_remote_indices_[index].first != nullptr)
 				{
-					ToType* to_ptr = links_and_remote_indices_[index].first;
+					typename RemoveConst<ToType>::Type& to_link_mutable = const_cast<RemoveConst<ToType>::Type&>(*links_and_remote_indices_[index].first);
+
 					links_and_remote_indices_[index].first = nullptr;
-					to_ptr->Reset<FromType>(links_and_remote_indices_[index].second);
+					to_link_mutable.Reset<FromType>(links_and_remote_indices_[index].second);
 				}
 				return;
 			}
@@ -147,7 +160,9 @@ namespace byes {
 
 				links_and_remote_indices_[index].first = &to_link;
 
-				links_and_remote_indices_[index].second = links_and_remote_indices_[index].first->Append<FromType>(static_cast<FromType&>(*this));
+				typename RemoveConst<ToType>::Type& to_link_mutable = const_cast<RemoveConst<ToType>::Type&>(to_link);
+
+				links_and_remote_indices_[index].second = to_link_mutable.Append<FromType>(static_cast<FromType&>(*this));
 
 				return;
 			}
@@ -211,6 +226,14 @@ namespace byes {
 	{
 	public:
 
+		Linked() = default;
+
+		template<typename FirstType, typename ... OtherTypes>
+		Linked(FirstType& first_ref, OtherTypes ... other_refs): Linked(other_refs...)
+		{
+			Set<FirstType>(first_ref);
+		}
+
 		template<typename ToType>
 		struct LinkCount
 		{
@@ -218,7 +241,7 @@ namespace byes {
 		};
 
 		template<class ToType>
-		ToType& Get(size_t index = 0) { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Get(index); }
+		ToType& Get(size_t index = 0) const { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Get(index); }
 
 		template<class ToType>
 		void Set(ToType& to_link, size_t index = 0) { LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<ToType>::value>::Set(to_link, index); }

@@ -32,7 +32,7 @@ struct Common : public byes::Linked<Common, byes::LinkArray<Dep, 16>>
 	int c;
 };
 
-struct Dep : public byes::Linked<Dep, Common>
+struct Dep : public byes::Linked<Dep, const Common>
 {
 	int d;
 };
@@ -80,7 +80,7 @@ int main()
 	c2.c += 10;
 
 	
-	const Common com();
+	const Common com{};
 
 	Dep dep1;
 	Dep dep2;

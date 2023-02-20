@@ -57,7 +57,7 @@ The motivation for this code was when we save a reference to a vector element an
       		b1 = std::move(b1_local);
       		b2 = std::move(b2_local);
       
-      	  c1 = std::move(c1_local);
+      	   c1 = std::move(c1_local);
       		c2 = std::move(c2_local);
       	}
       

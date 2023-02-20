@@ -1,9 +1,9 @@
-// dynamic_link.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
+#include "dynamic_link.h"
+
 #include <cassert>
 #include <iostream>
+#include <vector>
 
-#include "dynamic_link.h"
 
 struct A;
 struct B;
@@ -11,34 +11,24 @@ struct C;
 
 struct ExplicitId;
 
-struct A : public byes::Linked<A, byes::LinkArray<B,2>, byes::LinkArray<C, 2>>
+using namespace byes::dynamic_link;
+
+struct A : public Linked<A, LinkArray<B,2>, LinkArray<C, 2>>
 {
 	int a = 0;
 };
 
-struct B : public byes::Linked<B, A>
+struct B : public Linked<B, A>
 {
 	int b = 0;
 };
 
-struct C : public byes::Linked<C, A>
+struct C : public Linked<C, A>
 {
 	int c = 0;
 };
 
-struct Dep;
-struct Common : public byes::Linked<Common, byes::LinkArray<Dep, 16>>
-{
-	int c;
-};
-
-struct Dep : public byes::Linked<Dep, const Common>
-{
-	int d;
-};
-
-
-int main()
+void BaseTest()
 {
 	A a;
 
@@ -74,46 +64,86 @@ int main()
 		c2 = std::move(c2_local);
 	}
 
-	b1.b+=10;
+	b1.b += 10;
 	b2.b += 10;
 	c1.c += 10;
 	c2.c += 10;
 
-	
-	const Common com{};
+	assert(b1.b == 110);
+	assert(b2.b == 111);
+
+	assert(c1.c == 210);
+	assert(c2.c == 211);
+}
+
+
+struct Dep;
+struct Common : public Linked<Common, LinkedAsConst<LinkArray<Dep, 2> >, LinkArray<Dep, 2> >
+{};
+
+struct Dep : public Linked<Dep, const Common, Common>
+{
+	int d = 0;
+};
+
+
+void ConstTest()
+{
+	const Common const_com{};
+	Common com{};
 
 	Dep dep1;
 	Dep dep2;
 
+	dep1.Set(const_com);
+	dep2.Set(const_com);
+
 	dep1.Set(com);
 	dep2.Set(com);
 
+	const_com.Get<Dep>(0).d = 1;
+	com.Get<Dep>(0).d += 1;
 
-	//byes::LinksHolder<A, B, 1> lh;
-	//byes::LinksHolder<A, B, 1> lh2 = lh;
+	const_com.Get<Dep>(1).d = 1;
+	com.Get<Dep>(1).d += 1;
 
-	//C c;
+	assert(dep1.d == 2);
+	assert(dep2.d == 2);
+}
 
-	//{
-	//	A a_local;
-	//	B b_local;
-	//	C c_local;
+struct VecDep;
+struct Element : public Linked<Element, LinkedAsConst<LinkArray<VecDep, 1> > >
+{
+	int e = 0;
+};
 
-	//	a_local.byes::DynamicLink<A, B>::Set(b_local);
-	//	a_local.byes::DynamicLink<A, C, ExplicitId>::Set(c_local);
+struct VecDep : public Linked<VecDep, const Element>
+{};
 
-	//	a = std::move(a_local);
-	//	b = std::move(b_local);
-	//	c = std::move(c_local);
-	//}
 
-	//a.byes::DynamicLink<A, B>::Get().b = 1;
-	//a.byes::DynamicLink<A, C, ExplicitId>::Get().c = 1;
+void VectorTest()
+{
+	std::vector<Element> vec;
+	
+	vec.push_back(Element());
+	vec.back().e = 1;
 
-	//c.Get().a = 1;
+	VecDep vec_dep;
+	vec_dep.Set(AsConst(vec.back()));
 
-	//assert(a.a == 1);
-	//assert(b.b == 1);
-	//assert(c.c == 1);
+	for (int i = 0; i < 256; i++)
+	{
+		vec.push_back(Element());
+	}
 
+	vec[0].e = 2;
+
+	assert(vec_dep.Get<const Element>().e == 2);
+}
+
+int main()
+{
+	BaseTest();
+	ConstTest();
+	VectorTest();
 }

@@ -56,9 +56,9 @@ The motivation for this code was when we save a reference to a vector element an
       
       		b1 = std::move(b1_local);
       		b2 = std::move(b2_local);
-      
-      	   c1 = std::move(c1_local);
-      		c2 = std::move(c2_local);
+            
+            c1 = std::move(c1_local);
+            c2 = std::move(c2_local);
       	}
       
       	b1.b += 10;
@@ -69,7 +69,7 @@ The motivation for this code was when we save a reference to a vector element an
       	assert(b1.b == 110);
       	assert(b2.b == 111);
       
-      	assert(c1.c == 210);
+         assert(c1.c == 210);
       	assert(c2.c == 211);
       }
      ```

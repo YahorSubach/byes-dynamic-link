@@ -1,4 +1,4 @@
-# dynamic link class that alows to link objects and re-link on moving
+# dynamic link class that alows to link objects and re-link them on moving
 The motivation for this code was when we save a reference to a vector element and get garbage after reallocation. There are many ways to overcome such a problem. For example don't refer to vector elements :) Or use resize/reserve. However, I was curious to try to solve the original problem using Move constructors and templates support.
 
 ## examples

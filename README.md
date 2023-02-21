@@ -112,7 +112,7 @@ The motivation for this code was when we save a reference to a vector element an
 - original vector element reference problem solution
 	``` cpp
 	struct VecDep;
-	struct Element : public Linked<Element, LinkedAsConst<LinkArray<VecDep, 1> > >
+	struct Element : public Linked<Element, LinkedAsConst<VecDep> >
 	{
 		int e = 0;
 	};

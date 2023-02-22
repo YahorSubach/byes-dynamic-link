@@ -167,7 +167,7 @@ namespace byes {
 				throw std::out_of_range("index");
 			}
 
-			void Set(ConstnessToType& to_link, size_t index)
+			void Set(ConstnessToType& to_link, size_t index, int linked_index)
 			{
 				if (index < link_cnt)
 				{
@@ -181,7 +181,15 @@ namespace byes {
 							const_cast<RemoveConst<ConstnessToType>::Type&>(*links_and_remote_indices_[index].first)
 							);
 
-					links_and_remote_indices_[index].second = mutable_link_holder.Append(static_cast<ConstnessFromType&>(*this));
+					if (linked_index >= 0)
+					{
+						links_and_remote_indices_[index].second = linked_index;
+						mutable_link_holder.Set(static_cast<ConstnessFromType&>(*this), linked_index, index);
+					}
+					else
+					{
+						links_and_remote_indices_[index].second = mutable_link_holder.Append(static_cast<ConstnessFromType&>(*this));
+					}
 
 					return;
 				}
@@ -275,10 +283,10 @@ namespace byes {
 			ToType& Get(size_t index = 0) const { return LinksHolder<const FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<const FromType, ToType>::value>::Get(index); }
 
 			template<class ToType>
-			void Set(ToType& to_link, size_t index = 0) { LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<FromType, ToType>::value>::Set(to_link, index); }
+			void Set(ToType& to_link, size_t index = 0, int linked_index = -1) { LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<FromType, ToType>::value>::Set(to_link, index, linked_index); }
 
 			template<class ToType>
-			void Set(ToType& to_link, size_t index = 0) const { LinksHolder<const FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<const FromType, ToType>::value>::Set(to_link, index); }
+			void Set(ToType& to_link, size_t index = 0, int linked_index = -1) const { LinksHolder<const FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<const FromType, ToType>::value>::Set(to_link, index, linked_index); }
 
 			template<class ToType>
 			size_t Append(ToType& to_link) { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<FromType, ToType>::value>::Append(to_link); }

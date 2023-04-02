@@ -171,24 +171,27 @@ namespace byes {
 			{
 				if (index < link_cnt)
 				{
-					Reset(index);
-
-					links_and_remote_indices_[index].first = &to_link;
-
-					LinksHolder<ConstnessToType, ConstnessFromType, ConstnessToType::template LinkCount<ConstnessToType, ConstnessFromType>::value>& mutable_link_holder =
-						static_cast<LinksHolder<ConstnessToType, ConstnessFromType, ConstnessToType::template LinkCount<ConstnessToType, ConstnessFromType>::value>&>
-						(
-							const_cast<RemoveConst<ConstnessToType>::Type&>(*links_and_remote_indices_[index].first)
-							);
-
-					if (linked_index >= 0)
+					if (links_and_remote_indices_[index].first != &to_link)
 					{
-						links_and_remote_indices_[index].second = linked_index;
-						mutable_link_holder.Set(static_cast<ConstnessFromType&>(*this), linked_index, index);
-					}
-					else
-					{
-						links_and_remote_indices_[index].second = mutable_link_holder.Append(static_cast<ConstnessFromType&>(*this));
+						Reset(index);
+
+						links_and_remote_indices_[index].first = &to_link;
+
+						LinksHolder<ConstnessToType, ConstnessFromType, ConstnessToType::template LinkCount<ConstnessToType, ConstnessFromType>::value>& mutable_link_holder =
+							static_cast<LinksHolder<ConstnessToType, ConstnessFromType, ConstnessToType::template LinkCount<ConstnessToType, ConstnessFromType>::value>&>
+							(
+								const_cast<RemoveConst<ConstnessToType>::Type&>(*links_and_remote_indices_[index].first)
+								);
+
+						if (linked_index >= 0)
+						{
+							links_and_remote_indices_[index].second = linked_index;
+							mutable_link_holder.Set(static_cast<ConstnessFromType&>(*this), linked_index, index);
+						}
+						else
+						{
+							links_and_remote_indices_[index].second = mutable_link_holder.Append(static_cast<ConstnessFromType&>(*this));
+						}
 					}
 
 					return;
@@ -280,7 +283,7 @@ namespace byes {
 			ToType& Get(size_t index = 0) { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<FromType, ToType>::value>::Get(index); }
 
 			template<class ToType>
-			ToType& Get(size_t index = 0) const { return LinksHolder<const FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<const FromType, ToType>::value>::Get(index); }
+			ToType& Get(size_t index = 0) const { return LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<FromType, ToType>::value>::Get(index); }
 
 			template<class ToType>
 			void Set(ToType& to_link, size_t index = 0, int linked_index = -1) { LinksHolder<FromType, ToType, LinkedInternal<FromType, ToTypes...>::template LinkCount<FromType, ToType>::value>::Set(to_link, index, linked_index); }
